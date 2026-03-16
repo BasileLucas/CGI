@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Calendar, { CalendarView } from "../components/calendar";
 import {
   Workshop,
@@ -10,15 +10,22 @@ import {
   COLOR_STYLES,
   getStoredWorkshops,
   saveStoredWorkshops,
-  getClientHistory,
-  buildClientSummaryText,
 } from "../lib/workshops";
+
+const CLIENTS_STORAGE_KEY = "workshop-pilot-clients";
 
 export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [events, setEvents] = useState<Workshop[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [viewDate, setViewDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("month");
+
+  const [showNewClientForm, setShowNewClientForm] = useState(false);
+  const [newClientData, setNewClientData] = useState({
+    name: "",
+    color: "blue" as Workshop["clientColor"],
+  });
 
   const [workshopData, setWorkshopData] = useState({
     title: "",
@@ -35,215 +42,136 @@ export default function Home() {
 
     if (savedEvents.length > 0) {
       setEvents(savedEvents);
-      return;
+    } else {
+      const defaultEvents: Workshop[] = [
+        {
+          id: "w1",
+          title: "Cadrage du programme de modernisation CRM",
+          date: "2026-03-10",
+          time: "09:00",
+          objective:
+            "Aligner les équipes métier et IT sur le périmètre fonctionnel cible du futur CRM, identifier les quick wins et sécuriser les dépendances SI.",
+          clientId: "c1",
+          clientName: "Carrefour",
+          clientColor: "blue",
+          rawNotes: "",
+          synthesisData: {
+            risks:
+              "Risque de désalignement entre les attentes métier et les capacités du SI existant.",
+            infos: "Le sponsor métier souhaite une première version visible dès le T3.",
+            decisions: "Validation d’un cadrage par lots fonctionnels.",
+            actions: "Formaliser le backlog prioritaire et planifier un atelier de restitution.",
+          },
+          participants: [],
+          prepGuide: "",
+        },
+        {
+          id: "w2",
+          title: "Revue des parcours clients omnicanaux",
+          date: "2026-03-14",
+          time: "14:00",
+          objective:
+            "Cartographier les parcours clients entre magasin, web et mobile afin d’identifier les points de friction et prioriser les améliorations.",
+          clientId: "c1",
+          clientName: "Carrefour",
+          clientColor: "blue",
+          rawNotes: "",
+          synthesisData: {
+            risks: "Risque de duplication des parcours entre canaux.",
+            infos: "Les équipes e-commerce et magasin n’utilisent pas les mêmes référentiels.",
+            decisions: "Lancer une cartographie cible commune.",
+            actions: "Préparer une analyse des irritants clients par canal.",
+          },
+          participants: [],
+          prepGuide: "",
+        },
+        {
+          id: "w3",
+          title: "Cadrage de la refonte du portail voyageurs",
+          date: "2026-03-12",
+          time: "10:30",
+          objective:
+            "Définir les objectifs de transformation du portail digital, clarifier les attentes des directions métiers et identifier les impacts organisationnels.",
+          clientId: "c2",
+          clientName: "SNCF",
+          clientColor: "green",
+          rawNotes: "",
+          synthesisData: {
+            risks: "Risque de divergence entre priorités UX et contraintes SI historiques.",
+            infos: "Le portail actuel est jugé peu lisible par les métiers.",
+            decisions: "Conduire une phase de cadrage centrée sur les parcours prioritaires.",
+            actions: "Planifier des interviews utilisateurs et une revue de l’existant.",
+          },
+          participants: [],
+          prepGuide: "",
+        },
+        {
+          id: "w4",
+          title: "Gouvernance du programme data mobilité",
+          date: "2026-03-18",
+          time: "11:00",
+          objective:
+            "Définir la gouvernance de la donnée, les priorités d’usage et les modalités de pilotage du programme data.",
+          clientId: "c2",
+          clientName: "SNCF",
+          clientColor: "green",
+          rawNotes: "",
+          synthesisData: {
+            risks: "Risque de faible appropriation des règles de gouvernance.",
+            infos: "Plusieurs entités produisent des données sans cadre partagé.",
+            decisions: "Nommer un référent data par domaine.",
+            actions: "Préparer une matrice rôles et responsabilités.",
+          },
+          participants: [],
+          prepGuide: "",
+        },
+        {
+          id: "w5",
+          title: "Harmonisation des parcours de souscription",
+          date: "2026-03-16",
+          time: "09:30",
+          objective:
+            "Identifier les écarts entre parcours actuels, définir les principes de convergence et aligner les parties prenantes sur la cible.",
+          clientId: "c3",
+          clientName: "AXA",
+          clientColor: "purple",
+          rawNotes: "",
+          synthesisData: {
+            risks: "Risque de résistance au changement sur les parcours historiques.",
+            infos: "Les différentes lignes métier ont des pratiques non homogènes.",
+            decisions: "Retenir une cible commune avec variantes limitées.",
+            actions: "Documenter les écarts et proposer une trajectoire de convergence.",
+          },
+          participants: [],
+          prepGuide: "",
+        },
+      ];
+
+      setEvents(defaultEvents);
+      saveStoredWorkshops(defaultEvents);
     }
 
-    const defaultEvents: Workshop[] = [
-      {
-        id: "w1",
-        title: "Cadrage du programme de modernisation CRM",
-        date: "2026-03-10",
-        time: "09:00",
-        objective:
-          "Aligner les équipes métier et IT sur le périmètre fonctionnel cible du futur CRM, identifier les quick wins et sécuriser les dépendances SI.",
-        clientId: "c1",
-        clientName: "Carrefour",
-        clientColor: "blue",
-        rawNotes: "",
-        synthesisData: {
-          risks:
-            "Risque de désalignement entre les attentes métier et les capacités du SI existant.",
-          infos: "Le sponsor métier souhaite une première version visible dès le T3.",
-          decisions: "Validation d’un cadrage par lots fonctionnels.",
-          actions: "Formaliser le backlog prioritaire et planifier un atelier de restitution.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w2",
-        title: "Revue des parcours clients omnicanaux",
-        date: "2026-03-14",
-        time: "14:00",
-        objective:
-          "Cartographier les parcours clients entre magasin, web et mobile afin d’identifier les points de friction et prioriser les améliorations.",
-        clientId: "c1",
-        clientName: "Carrefour",
-        clientColor: "blue",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de duplication des parcours entre canaux.",
-          infos: "Les équipes e-commerce et magasin n’utilisent pas les mêmes référentiels.",
-          decisions: "Lancer une cartographie cible commune.",
-          actions: "Préparer une analyse des irritants clients par canal.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w3",
-        title: "Cadrage de la refonte du portail voyageurs",
-        date: "2026-03-12",
-        time: "10:30",
-        objective:
-          "Définir les objectifs de transformation du portail digital, clarifier les attentes des directions métiers et identifier les impacts organisationnels.",
-        clientId: "c2",
-        clientName: "SNCF",
-        clientColor: "green",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de divergence entre priorités UX et contraintes SI historiques.",
-          infos: "Le portail actuel est jugé peu lisible par les métiers.",
-          decisions: "Conduire une phase de cadrage centrée sur les parcours prioritaires.",
-          actions: "Planifier des interviews utilisateurs et une revue de l’existant.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w4",
-        title: "Gouvernance du programme data mobilité",
-        date: "2026-03-18",
-        time: "11:00",
-        objective:
-          "Définir la gouvernance de la donnée, les priorités d’usage et les modalités de pilotage du programme data.",
-        clientId: "c2",
-        clientName: "SNCF",
-        clientColor: "green",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de faible appropriation des règles de gouvernance.",
-          infos: "Plusieurs entités produisent des données sans cadre partagé.",
-          decisions: "Nommer un référent data par domaine.",
-          actions: "Préparer une matrice rôles et responsabilités.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w5",
-        title: "Harmonisation des parcours de souscription",
-        date: "2026-03-16",
-        time: "09:30",
-        objective:
-          "Identifier les écarts entre parcours actuels, définir les principes de convergence et aligner les parties prenantes sur la cible.",
-        clientId: "c3",
-        clientName: "AXA",
-        clientColor: "purple",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de résistance au changement sur les parcours historiques.",
-          infos: "Les différentes lignes métier ont des pratiques non homogènes.",
-          decisions: "Retenir une cible commune avec variantes limitées.",
-          actions: "Documenter les écarts et proposer une trajectoire de convergence.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w6",
-        title: "Revue des exigences conformité et sécurité",
-        date: "2026-03-20",
-        time: "15:30",
-        objective:
-          "Recenser les contraintes réglementaires et sécurité applicables au projet et formaliser les actions à engager.",
-        clientId: "c3",
-        clientName: "AXA",
-        clientColor: "purple",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de non-conformité si certaines exigences sont traitées trop tard.",
-          infos: "Le RSSI demande une revue complète des habilitations.",
-          decisions: "Intégrer un point sécurité dans chaque comité projet.",
-          actions: "Produire une checklist conformité et sécurité.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w7",
-        title: "Cadrage de la migration vers le cloud",
-        date: "2026-03-11",
-        time: "13:30",
-        objective:
-          "Identifier les applications concernées, définir les principes de migration et établir les premières hypothèses de trajectoire.",
-        clientId: "c4",
-        clientName: "Orange",
-        clientColor: "orange",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de sous-estimation des dépendances applicatives.",
-          infos: "Certaines applications ont des contraintes fortes de disponibilité.",
-          decisions: "Prioriser une approche par vagues de migration.",
-          actions: "Construire une cartographie applicative cible.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w8",
-        title: "Atelier de coordination sécurité et infrastructure",
-        date: "2026-03-21",
-        time: "10:00",
-        objective:
-          "Aligner les exigences de sécurité avec les contraintes d’infrastructure et définir les mesures de remédiation prioritaires.",
-        clientId: "c4",
-        clientName: "Orange",
-        clientColor: "orange",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de friction entre exigences sécurité et contraintes d’exploitation.",
-          infos: "Des écarts ont été remontés sur les environnements non productifs.",
-          decisions: "Valider un plan d’action sécurité sur 3 mois.",
-          actions: "Prioriser les remédiations et affecter les responsables.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w9",
-        title: "Cadrage de l’amélioration du parcours crédit",
-        date: "2026-03-13",
-        time: "09:00",
-        objective:
-          "Identifier les irritants du parcours actuel, formaliser les attentes métier et construire une première trajectoire d’amélioration.",
-        clientId: "c5",
-        clientName: "BNP Paribas",
-        clientColor: "red",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de complexité excessive sur certaines étapes du parcours.",
-          infos: "Le taux d’abandon est jugé trop élevé sur la demande en ligne.",
-          decisions: "Lancer une analyse détaillée des étapes bloquantes.",
-          actions: "Préparer un diagnostic UX et métier.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-      {
-        id: "w10",
-        title: "Atelier de pilotage des actions réglementaires",
-        date: "2026-03-24",
-        time: "16:00",
-        objective:
-          "Suivre l’état d’avancement des actions liées aux exigences réglementaires et arbitrer les priorités.",
-        clientId: "c5",
-        clientName: "BNP Paribas",
-        clientColor: "red",
-        rawNotes: "",
-        synthesisData: {
-          risks: "Risque de retard sur certaines actions à fort enjeu de conformité.",
-          infos: "Plusieurs chantiers sont dépendants d’arbitrages encore en attente.",
-          decisions: "Mettre en place un suivi hebdomadaire des points bloquants.",
-          actions: "Consolider le plan d’actions réglementaires d’ici le prochain comité.",
-        },
-        participants: [],
-        prepGuide: "",
-      },
-    ];
+    if (typeof window !== "undefined") {
+      const savedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
+      if (savedClients) {
+        try {
+          const parsedClients: Client[] = JSON.parse(savedClients);
+          const mergedClients = [...CLIENTS];
 
-    setEvents(defaultEvents);
-    saveStoredWorkshops(defaultEvents);
+          parsedClients.forEach((savedClient) => {
+            if (!mergedClients.some((client) => client.id === savedClient.id)) {
+              mergedClients.push(savedClient);
+            }
+          });
+
+          setClients(mergedClients);
+        } catch {
+          setClients(CLIENTS);
+        }
+      } else {
+        setClients(CLIENTS);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -252,15 +180,11 @@ export default function Home() {
     }
   }, [events]);
 
-  const selectedClientHistory = useMemo(() => {
-    if (!workshopData.clientId) return [];
-    return getClientHistory(events, workshopData.clientId);
-  }, [events, workshopData.clientId]);
-
-  const selectedClientSummary = useMemo(() => {
-    if (selectedClientHistory.length === 0) return "";
-    return buildClientSummaryText(selectedClientHistory);
-  }, [selectedClientHistory]);
+  useEffect(() => {
+    if (clients.length > 0 && typeof window !== "undefined") {
+      localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(clients));
+    }
+  }, [clients]);
 
   const handleCreate = () => {
     if (
@@ -289,9 +213,7 @@ export default function Home() {
       rawNotes: "",
       synthesisData: { risks: "", infos: "", decisions: "", actions: "" },
       participants: [],
-      prepGuide: selectedClientSummary
-        ? `Contexte consolidé avant atelier :\n\n${selectedClientSummary}`
-        : "",
+      prepGuide: "",
     };
 
     const updatedEvents = [...events, newWorkshop];
@@ -299,6 +221,7 @@ export default function Home() {
     saveStoredWorkshops(updatedEvents);
 
     setShowForm(false);
+    setShowNewClientForm(false);
     setWorkshopData({
       title: "",
       date: "",
@@ -308,6 +231,39 @@ export default function Home() {
       clientName: "",
       clientColor: "blue",
     });
+  };
+
+  const handleCreateClient = () => {
+    if (!newClientData.name.trim()) {
+      alert("Merci de renseigner un nom de client.");
+      return;
+    }
+
+    const newClient: Client = {
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `client-${Math.random().toString(36).slice(2)}`,
+      name: newClientData.name.trim(),
+      color: newClientData.color,
+    };
+
+    const updatedClients = [...clients, newClient];
+    setClients(updatedClients);
+
+    setWorkshopData((prev) => ({
+      ...prev,
+      clientId: newClient.id,
+      clientName: newClient.name,
+      clientColor: newClient.color,
+    }));
+
+    setNewClientData({
+      name: "",
+      color: "blue",
+    });
+
+    setShowNewClientForm(false);
   };
 
   const deleteEvent = (id: string) => {
@@ -431,7 +387,7 @@ export default function Home() {
                   className="w-full p-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-medium"
                   value={workshopData.clientId}
                   onChange={(e) => {
-                    const selectedClient = CLIENTS.find(
+                    const selectedClient = clients.find(
                       (c: Client) => c.id === e.target.value
                     );
 
@@ -444,12 +400,20 @@ export default function Home() {
                   }}
                 >
                   <option value="">Sélectionner un client</option>
-                  {CLIENTS.map((client: Client) => (
+                  {clients.map((client: Client) => (
                     <option key={client.id} value={client.id}>
                       {client.name}
                     </option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowNewClientForm(!showNewClientForm)}
+                  className="mt-3 text-xs font-black uppercase tracking-widest text-blue-600 hover:text-blue-700"
+                >
+                  + Nouveau client
+                </button>
               </div>
 
               <div className="flex items-end">
@@ -464,6 +428,62 @@ export default function Home() {
                   </div>
                 )}
               </div>
+
+              {showNewClientForm && (
+                <div className="md:col-span-2 bg-slate-50 border border-slate-200 rounded-[28px] p-6">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                    Créer un nouveau client
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">
+                        Nom du client
+                      </label>
+                      <input
+                        placeholder="Ex : Air France"
+                        className="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-medium"
+                        value={newClientData.name}
+                        onChange={(e) =>
+                          setNewClientData({ ...newClientData, name: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">
+                        Couleur
+                      </label>
+                      <select
+                        className="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-medium"
+                        value={newClientData.color}
+                        onChange={(e) =>
+                          setNewClientData({
+                            ...newClientData,
+                            color: e.target.value as Workshop["clientColor"],
+                          })
+                        }
+                      >
+                        <option value="blue">Bleu</option>
+                        <option value="green">Vert</option>
+                        <option value="purple">Violet</option>
+                        <option value="orange">Orange</option>
+                        <option value="red">Rouge</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={handleCreateClient}
+                      className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all"
+                    >
+                      Enregistrer le client
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">
@@ -521,56 +541,6 @@ export default function Home() {
                 />
               </div>
             </div>
-
-            {workshopData.clientId && (
-              <div className="mb-8 bg-slate-50 rounded-[28px] border border-slate-200 p-8">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                  Mémoire client avant nouvel atelier
-                </h3>
-
-                {selectedClientHistory.length > 0 ? (
-                  <>
-                    <p className="text-sm font-bold text-slate-700 mb-4">
-                      {selectedClientHistory.length} atelier(s) précédent(s) retrouvé(s) pour{" "}
-                      {workshopData.clientName}
-                    </p>
-
-                    <div className="space-y-3 mb-6">
-                      {selectedClientHistory.slice(0, 3).map((item: Workshop) => (
-                        <div
-                          key={item.id}
-                          className="bg-white rounded-2xl border border-slate-200 p-4"
-                        >
-                          <p className="text-sm font-black text-slate-800">
-                            {item.title}
-                          </p>
-                          <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">
-                            {item.date} {item.time ? `@ ${item.time}` : ""}
-                          </p>
-                          <p className="text-sm text-slate-600 mt-3">
-                            {item.objective}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="bg-slate-900 rounded-3xl p-6 text-white">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-3">
-                        Synthèse consolidée
-                      </p>
-                      <pre className="whitespace-pre-wrap text-xs leading-relaxed text-slate-200 font-sans">
-                        {selectedClientSummary}
-                      </pre>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-slate-500 font-bold italic">
-                    Aucun historique disponible pour ce client. Cet atelier servira de base de
-                    capitalisation.
-                  </p>
-                )}
-              </div>
-            )}
 
             <button
               onClick={handleCreate}
