@@ -168,3 +168,20 @@ export const buildClientSummaryText = (history: Workshop[]) => {
     ),
   ].join("\n");
 };
+export const groupWorkshopsByClient = (events: Workshop[]) => {
+  return CLIENTS.map((client) => {
+    const workshops = events
+      .filter((event) => event.clientId === client.id)
+      .sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.time || "00:00"}`).getTime();
+        const dateB = new Date(`${b.date}T${b.time || "00:00"}`).getTime();
+        return dateB - dateA;
+      });
+
+    return {
+      client,
+      workshops,
+      summary: buildClientSummaryText(workshops),
+    };
+  });
+};
