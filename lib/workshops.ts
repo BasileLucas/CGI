@@ -135,9 +135,22 @@ export const getClientHistory = (events: Workshop[], clientId: string, currentId
 export const buildClientSummaryText = (history: Workshop[]) => {
   const recent = history.slice(0, 5);
 
-  const block = (label: string, values: string[]) => {
-    const filtered = values.map((v) => v?.trim()).filter(Boolean);
-    if (filtered.length === 0) return `${label} : aucun élément consolidé.`;
+  const normalizeToText = (value: unknown): string => {
+    if (typeof value === "string") return value.trim();
+    if (value === null || value === undefined) return "";
+    if (typeof value === "number" || typeof value === "boolean") return String(value).trim();
+    return "";
+  };
+
+  const block = (label: string, values: unknown[]) => {
+    const filtered = values
+      .map((v) => normalizeToText(v))
+      .filter((v) => v.length > 0);
+
+    if (filtered.length === 0) {
+      return `${label} : aucun élément consolidé.`;
+    }
+
     return `${label} :\n- ${filtered.join("\n- ")}`;
   };
 
@@ -149,22 +162,22 @@ export const buildClientSummaryText = (history: Workshop[]) => {
     "",
     block(
       "Décisions déjà prises",
-      recent.map((w) => w.synthesisData?.decisions || "")
+      recent.map((w) => w.synthesisData?.decisions)
     ),
     "",
     block(
       "Actions déjà identifiées",
-      recent.map((w) => w.synthesisData?.actions || "")
+      recent.map((w) => w.synthesisData?.actions)
     ),
     "",
     block(
       "Risques déjà remontés",
-      recent.map((w) => w.synthesisData?.risks || "")
+      recent.map((w) => w.synthesisData?.risks)
     ),
     "",
     block(
       "Informations clés",
-      recent.map((w) => w.synthesisData?.infos || "")
+      recent.map((w) => w.synthesisData?.infos)
     ),
   ].join("\n");
 };
